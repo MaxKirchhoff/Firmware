@@ -3,6 +3,7 @@ include(posix/px4_impl_posix)
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/toolchains/Toolchain-native.cmake)
 
 set(config_module_list
+
 	drivers/boards/sitl
 	drivers/device
 	drivers/gps
@@ -42,6 +43,7 @@ set(config_module_list
 	modules/logger
 	modules/mavlink
 	modules/mc_att_control
+	modules/uw_att_control
 	modules/mc_pos_control
 	modules/navigator
 	modules/param
@@ -55,6 +57,7 @@ set(config_module_list
 	modules/systemlib/mixer
 	modules/uORB
 	modules/vtol_att_control
+modules/hippo_campus
 
 	lib/controllib
 	lib/conversion
@@ -76,6 +79,7 @@ set(config_module_list
 	examples/mc_pos_control_multiplatform
 	examples/ekf_att_pos_estimator
 	examples/attitude_estimator_ekf
+	examples/fixedwing_control
 
 	#
 	# Testing

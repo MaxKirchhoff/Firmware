@@ -1,7 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2013 PX4 Development Team. All rights reserved.
- *   Author: Lorenz Meier <lm@inf.ethz.ch>
+ *   Copyright (c) 2013-2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,47 +30,74 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
-/*
- * @file params.c
- *
- * Parameters for fixedwing demo
- */
-
-#include "params.h"
-
-/* controller parameters, use max. 15 characters for param name! */
+#include <systemlib/param/param.h>
 
 /**
+ * @file uw_att_control_params.c
+ *
+ * Parameters for Underwater Attitude Control
  *
  */
-PARAM_DEFINE_FLOAT(EXFW_HDNG_P, 0.1f);
+
+
 
 /**
+ * Roll P Gain
+ *
+ * Roll proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
+ * increase to make controler more aggressive
  *
  */
-PARAM_DEFINE_FLOAT(EXFW_ROLL_P, 0.2f);
+
+PARAM_DEFINE_FLOAT(UW_ROLL_P, 1.0f);
 
 /**
+ * Roll D Gain
+ *
+ * Roll rate proportional gain, i.e. control output for angular speed error 1 rad/s.
+ * increase to dampen controler
  *
  */
-PARAM_DEFINE_FLOAT(EXFW_PITCH_P, 0.2f);
 
-int parameters_init(struct param_handles *h)
-{
-	/* PID parameters */
-	h->hdng_p 	=	param_find("EXFW_HDNG_P");
-	h->roll_p 	=	param_find("EXFW_ROLL_P");
-	h->pitch_p 	=	param_find("EXFW_PITCH_P");
+PARAM_DEFINE_FLOAT(UW_ROLL_RATE_P, 5.0f);
 
-    return 1;
-}
+/**
+ * Pitch P Gain
+ *
+ * Pitch proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
+ * increase to make controler more aggressive
+ *
+ */
 
-int parameters_update(const struct param_handles *h, struct params *p)
-{
-	param_get(h->hdng_p, &(p->hdng_p));
-	param_get(h->roll_p, &(p->roll_p));
-	param_get(h->pitch_p, &(p->pitch_p));
+PARAM_DEFINE_FLOAT(UW_PITCH_P, 1.0f);
 
-    return 1;
-}
+/**
+ * Pitch D Gain
+ *
+ * Pitch rate proportional gain, i.e. control output for angular speed error 1 rad/s.
+ * increase to dampen controler
+ *
+ */
+
+PARAM_DEFINE_FLOAT(UW_PITCH_RATE_P, 5.0f);
+
+/**
+ * Yaw P Gain
+ *
+ * Yaw proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
+ * increase to make controler more aggressive
+ *
+ */
+
+PARAM_DEFINE_FLOAT(UW_YAW_P, 1.0f);
+
+/**
+ * Yaw D Gain
+ *
+ * Yaw rate proportional gain, i.e. control output for angular speed error 1 rad/s.
+ * increase to dampen controler
+ *
+ */
+
+PARAM_DEFINE_FLOAT(UW_YAW_RATE_P, 5.0f);
+
