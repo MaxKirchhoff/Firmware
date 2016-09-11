@@ -875,16 +875,16 @@ MulticopterAttitudeControl::task_main()
 			/* Check if we are in rattitude mode and the pilot is above the threshold on pitch
 			 * or roll (yaw can rotate 360 in normal att control).  If both are true don't
 			 * even bother running the attitude controllers */
-			if (_v_control_mode.flag_control_rattitude_enabled) {
+            if (false){//_v_control_mode.flag_control_rattitude_enabled) {
 				if (fabsf(_manual_control_sp.y) > _params.rattitude_thres ||
 				    fabsf(_manual_control_sp.x) > _params.rattitude_thres) {
 					_v_control_mode.flag_control_attitude_enabled = false;
 				}
 			}
 
-			if (_v_control_mode.flag_control_attitude_enabled) {
+            if (true){//_v_control_mode.flag_control_attitude_enabled) {
 
-				if (_ts_opt_recovery == nullptr) {
+                if (true){//_ts_opt_recovery == nullptr) {
 					// the  tailsitter recovery instance has not been created, thus, the vehicle
 					// is not a tailsitter, do normal attitude control
 					control_attitude(dt);
@@ -951,7 +951,7 @@ MulticopterAttitudeControl::task_main()
 				}
 			}
 
-			if (_v_control_mode.flag_control_rates_enabled) {
+            if (true){//_v_control_mode.flag_control_rates_enabled) {
 				control_attitude_rates(dt);
 
 				/* publish actuator controls */
@@ -967,7 +967,7 @@ MulticopterAttitudeControl::task_main()
 				_controller_status.yaw_rate_integ = _rates_int(2);
 				_controller_status.timestamp = hrt_absolute_time();
 
-				if (!_actuators_0_circuit_breaker_enabled) {
+                if (true){//!_actuators_0_circuit_breaker_enabled) {
 					if (_actuators_0_pub != nullptr) {
 
 						orb_publish(_actuators_id, _actuators_0_pub, &_actuators);

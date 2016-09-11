@@ -102,11 +102,15 @@ private:
     bool	_task_should_exit;		/**< if true, task_main() should exit */
     int		_control_task;			/**< task handle */
 
+
     orb_advert_t     _v_att_sp_pub;          /**< vehicle attitude setpoint publication */
+    int     _v_att_sub;             /**< vehicle attitude subscription */
 
     struct vehicle_attitude_setpoint_s	_v_att_sp;			/**< vehicle attitude setpoint */
+    struct vehicle_attitude_s           _v_att;             /**< vehicle attitude */
 
 
+    void send_setpoint (float q[4]);
     /**
      * Shim for calling task_main from task_create.
      */
@@ -130,10 +134,12 @@ HippoCampusTest::HippoCampusTest() :
 
     _task_should_exit(false),
     _control_task(-1),
-    _v_att_sp_pub(nullptr)
+    _v_att_sp_pub(nullptr),
+    _v_att_sub(-1)
 
 {
     memset(&_v_att_sp, 0, sizeof(_v_att_sp));
+    memset(&_v_att, 0, sizeof(_v_att));
 }
 
 HippoCampusTest::~HippoCampusTest()
@@ -162,7 +168,33 @@ HippoCampusTest::~HippoCampusTest()
 }
 
 
+void HippoCampusTest::send_setpoint (float q[2]){
+    float set_q[4]={q[0],q[1],0.0f,0.0f};
+    math::Quaternion q_d;
+    q_d.set(set_q);
+    memcpy(&_v_att_sp.q_d[0], &q_d.data[0], sizeof(_v_att_sp.q_d));
+    orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
 
+    bool roll_ok,pitch_ok,yaw_ok;
+
+    while(true){
+    usleep(2000);
+    orb_copy(ORB_ID(vehicle_attitude), _v_att_sub, &_v_att);
+
+    //roll +-5 degrees, ignore when setpoint is facing up/down
+    roll_ok=(abs((int)_v_att.roll*100)<9)||q[0]>0.9f||q[0]<-0.9f;
+
+    //pitch +-5degrees
+    pitch_ok=(abs((int)((_v_att.pitch-q[0]*1.571f)*100))<9);
+
+    //yaw +-5degrees, ignore when setpoint is facing up/down
+    yaw_ok=(abs((int)((_v_att.yaw-q[1]*3.141f)*100))<9)||q[0]>0.9f||q[0]<-0.9f;
+
+
+    if(roll_ok && pitch_ok && yaw_ok) break;
+    }
+
+}
 
 
 
@@ -180,14 +212,15 @@ void HippoCampusTest::task_main()
 
 
 _v_att_sp_pub = orb_advertise(ORB_ID(vehicle_attitude_setpoint), &_v_att_sp);
+_v_att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
 
 //set setpoint quaternion
-math::Quaternion q_d;
-_v_att_sp.thrust=1.0f;
+
+_v_att_sp.thrust=0.5f;
 orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
     //countdown
       warnx("5");
-      usleep(1000000);
+      usleep(500000);
       _v_att_sp.thrust=0.0f;
       orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
       warnx("4");
@@ -200,24 +233,49 @@ orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
       usleep(1000000);
 
 
-      warnx("setpoint 1");
-      q_d.from_euler(1.0f,0.0f,0.0f);
-      memcpy(&_v_att_sp.q_d[0], &q_d.data[0], sizeof(_v_att_sp.q_d));
-      orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
-      usleep(5000000);
+ /** ------input --pitch, yaw-------------------**/
+int num_setpoints=17;
+float q[17][2] = {{0.2f, 0.0f},
+                  {0.0f, 0.0f},
+                  {0.0f, 0.0f},
+                  {0.0f, -0.5f},
+                  {0.0f, -1.0f},
+                  {0.0f, 0.5f},
+                  {0.0f, 1.0f},
+                  {0.0f, -0.5f},
+                  {0.0f, 0.0f},
+                  {0.2f, 0.5f},
+                  {0.2f, 1.0f},
+                  {0.2f, -0.5f},
+                  {0.2f, 0.0f},
+                  {0.2f, 0.5f},
+                  {0.2f, 1.0f},
+                  {0.2f, -0.5f},
+                  {0.0f, 0.0f}
+                 };
 
-      warnx("setpoint 2");
-      q_d.from_euler(0.0f,0.0f,0.0f);
-      memcpy(&_v_att_sp.q_d[0], &q_d.data[0], sizeof(_v_att_sp.q_d));
-      orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
-      usleep(5000000);
+_v_att_sp.thrust=0.3f;
+    orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
 
-      warnx("setpoint 3");
-      q_d.from_euler(0.0f,3.1415f,0.0f);
-      memcpy(&_v_att_sp.q_d[0], &q_d.data[0], sizeof(_v_att_sp.q_d));
-      orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
-      usleep(5000000);
+for(int i=0; i<num_setpoints;i++){
+    warnx("next setpoint");
+    send_setpoint(q[i]);
+//thrust between setpoints
+//    _v_att_sp.thrust=0.5f;
+//    orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
+//    usleep(500000);
+//    _v_att_sp.thrust=-0.5f;
+//    orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
+//    usleep(200000);
+//    _v_att_sp.thrust=0.0f;
+//    orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
+//    usleep(100000);
 
+}
+_v_att_sp.thrust=0.0f;
+    orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
+
+    usleep(100000000);
     warnx("tschüss");
      _task_should_exit=true;
 
