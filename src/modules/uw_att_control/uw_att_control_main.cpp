@@ -176,7 +176,9 @@ private:
      */
     void		control_attitude();
 
+    void        r_body_control();
 
+    void        quaternion_control();
     /**
      * Check for vehicle motor limits status.
      */
@@ -370,25 +372,27 @@ void UnderwaterAttitudeControl::control_attitude()
       *
       *
       * **/
-/**/
+
     // desired
-    float pitch_sp= _v_att_sp.q_d[0]*1.571f;
-    float yaw_sp = _v_att_sp.q_d[1]*3.141f;
+    float pitch_sp= _v_att_sp.pitch_body;
+    float yaw_sp = _v_att_sp.yaw_body;
+    float roll_sp = _v_att_sp.roll_body;
 
 
 
 
 
-    //roll stabilisation if pitch is ~ -85°...85°
-    float control_roll = (0.0f - _v_att.roll) * _params.roll_p - _v_att.rollspeed * _params.roll_rate_p;
+
+    // roll stabilisation if pitch is ~ -85°...85°
+    float control_roll = (roll_sp - _v_att.roll) * _params.roll_p - _v_att.rollspeed * _params.roll_rate_p;
 
 
-    //pitch control
+    // pitch control
     float pitch_err = pitch_sp - _v_att.pitch;
     float control_pitch = pitch_err * _params.pitch_p - _v_att.pitchspeed * _params.pitch_rate_p;
 
 
-    //yaw control, go shortest way
+    // yaw control, go shortest way
     float yaw_err;
     if (abs((int)((yaw_sp - _v_att.yaw )*100)) > 314){
         yaw_err = _v_att.yaw - yaw_sp;
@@ -397,27 +401,24 @@ void UnderwaterAttitudeControl::control_attitude()
     float control_yaw = (yaw_err) * _params.yaw_p - _v_att.yawspeed * _params.yaw_rate_p;
 
 
-    //adjustments for vertical positioning
-    if (pitch_sp > 1.5f && pitch_sp < -1.5f ){
-        //control_roll=0.0f;
+    // ignore roll when vertical (singularity)
+    if (pitch_sp > 1.5f || pitch_sp < -1.5f ){
+        control_roll=0.0f;
         //control_yaw=0.0f;
 
         // we are facing up but pitching too much
-        /*if(pitch_sp > 1.4f && _v_att.pitch < -1.57){
-
-
-        }*/
+        // if(pitch_sp > 1.4f && _v_att.pitch < -1.57){
     }
 
-    //roll, pitch dominance
-    control_yaw=control_yaw/ ((1+abs((int)(control_roll*10.0f)))*(1+abs((int)(control_pitch*10.0f))));
+    // roll, pitch dominance
+    control_yaw=control_yaw/ ((1+abs((int)(control_roll*10.0f)))*(1+abs((int)(control_pitch*300.0f))));
 
 
-    /* set actuator outputs
-     * use use manual input whenever it is not zero
-     */
+      // set actuator outputs
+      // use manual input whenever it is not zero
 
-    _att_control(0) = (int(_v_rates_sp.roll*100) == 0) ? control_roll : _v_rates_sp.roll;                                                 // <-- choose one
+
+    _att_control(0) = (int(_v_rates_sp.roll*100) == 0) ? control_roll : _v_rates_sp.roll;
     _att_control(1) = (int(_v_rates_sp.pitch*100) == 0) ? control_pitch : _v_rates_sp.pitch;
     _att_control(2) = (int(_v_rates_sp.yaw*100) == 0) ? control_yaw : _v_rates_sp.yaw;
 
@@ -425,43 +426,54 @@ void UnderwaterAttitudeControl::control_attitude()
     //roll, pitch dominance over thrust
     _thrust_sp=_v_att_sp.thrust/ ((1+abs((int)(control_roll*10.0f)))*(1+abs((int)(control_pitch*10.0f))));
 
-
-/** Euler/Quaternion based controler **/
-    /* get current rotation matrix from control state quaternions
-    math::Quaternion q_att(_v_att.q[0], _v_att.q[1], _v_att.q[2], _v_att.q[3]);
-    math::Matrix<3, 3> R = q_att.to_dcm();
-
-    math::Matrix<3, 3> R_sp;
-    R_sp.set(_v_att_sp.R_body);
+}
 
 
-    //math::Vector<3> control_weight;
-    math::Vector<3> p_gain(_params.roll_p, _params.pitch_p, _params.yaw_p);
-    math::Vector<3> d_gain(_params.roll_rate_p, _params.pitch_rate_p, _params.yaw_rate_p);
+void UnderwaterAttitudeControl::r_body_control(){
+    /** Euler/Quaternion based controler **/
+        // get current rotation matrix from control state quaternions
+        math::Quaternion q_att(_v_att.q[0], _v_att.q[1], _v_att.q[2], _v_att.q[3]);
+        math::Matrix<3, 3> R = q_att.to_dcm();
+
+        math::Matrix<3, 3> R_sp;
+        R_sp.set(_v_att_sp.R_body);
 
 
-    math::Quaternion q_error;
-    q_error.from_dcm(R.transposed() * R_sp);
-    math::Vector<3> e_R_d = q_error(0) >= 0.0f ? q_error.imag()  * 2.0f : -q_error.imag() * 2.0f;
+        //math::Vector<3> control_weight;
+        math::Vector<3> p_gain(_params.roll_p, _params.pitch_p, _params.yaw_p);
+        math::Vector<3> d_gain(_params.roll_rate_p, _params.pitch_rate_p, _params.yaw_rate_p);
 
-    _rates_sp = p_gain.emult(e_R_d);
 
-    math::Vector<3> rates;
-    rates(0) = _v_att.rollspeed;
-    rates(1) = _v_att.pitchspeed;
-    rates(2) = _v_att.yawspeed;
+        math::Quaternion q_error;
+        q_error.from_dcm(R.transposed() * R_sp);
+        math::Vector<3> e_R_d = q_error(0) >= 0.0f ? q_error.imag()  * 2.0f : -q_error.imag() * 2.0f;
 
-     math::Vector<3> rates_err(-_rates_sp-rates);
-    _att_control=rates_err.emult(d_gain);
+        _rates_sp = p_gain.emult(e_R_d);
 
-    _att_control=_rates_sp;
-    _thrust_sp=_v_att_sp.thrust;
-*/
+        math::Vector<3> rates;
+        rates(0) = _v_att.rollspeed;
+        rates(1) = _v_att.pitchspeed;
+        rates(2) = _v_att.yawspeed;
 
+         math::Vector<3> rates_err(-_rates_sp-rates);
+        _att_control=rates_err.emult(d_gain);
+
+        _att_control=_rates_sp;
+        _thrust_sp=_v_att_sp.thrust;
+
+
+
+
+}
+
+void UnderwaterAttitudeControl::quaternion_control(){
 
     /** quaternion based controler following "Full Quaternion Based Attitude Control for a Quadrotor"
         by Emil Fresk and George Nikolakopoulos**/
-/*
+/**/
+
+    vehicle_rates_setpoint_poll();
+    vehicle_attitude_setpoint_poll();
     // desired
     math::Quaternion q_ref(_v_att_sp.q_d[0], _v_att_sp.q_d[1], _v_att_sp.q_d[2], _v_att_sp.q_d[3]);
     // measured
@@ -469,7 +481,12 @@ void UnderwaterAttitudeControl::control_attitude()
     // error
     math::Quaternion q_err(q_ref*q_m.conjugated());
     // axis error
-    math::Vector<3> axis_err = q_err(0) >= 0.0f ? q_err.imag() : -q_err.imag();
+    float axis_err_f[3];
+        axis_err_f[0]=true ? q_err(1):-q_err(1);
+        axis_err_f[1]=true ? q_err(2):-q_err(2);
+        axis_err_f[2]=true ? q_err(3):-q_err(3);
+
+    math::Vector<3> axis_err = axis_err_f;
 
     // rates
     math::Vector<3> rates;
@@ -481,51 +498,21 @@ void UnderwaterAttitudeControl::control_attitude()
     math::Vector<3> p_gain(_params.roll_p, _params.pitch_p, _params.yaw_p);
     math::Vector<3> rates_p_gain(_params.roll_rate_p, _params.pitch_rate_p, _params.yaw_rate_p);
 
-    //control weight
-    //math::Vector<3> control_weight;
-    math::Vector<3> ones(1.0f, 1.0f, 1.0f);
-    math::Vector<3> zero;
-                    zero.zero();
-   // float min_err=0.001f;
+// aplly pd-gain
+_att_control = -p_gain.emult(axis_err) - rates_p_gain.emult(rates);//}
 
-if(axis_err(0)>=0.1f){
-    axis_err(1)=0.0f;
-    rates(1)=0.0f;
-    axis_err(2)=0.0f;
-    rates(2)=0.0f;
+//roll, pitch dominance
+//_att_control(3) = _att_control(3)/ ((1+abs((int)(_att_control(1)*10.0f)))*(1+abs((int)(_att_control(2)*10.0f))));
 
-}
-
-if(axis_err(1)>=0.1f){
-    axis_err(0)=0.0f;
-    rates(0)=0.0f;
-    axis_err(2)=0.0f;
-    rates(2)=0.0f;
-
-}
-
-if(axis_err(2)>=0.1f){
-    axis_err(0)=0.0f;
-    rates(0)=0.0f;
-    axis_err(1)=0.0f;
-    rates(1)=0.0f;
-
-}
-_att_control = -p_gain.emult(axis_err) - rates_p_gain.emult(rates);
-
-
+//float *axenfehler = q_err.data;
     //throttle
     //_att_control = (axis_err.length() >= min_err) ? (-p_gain.emult(axis_err) - rates_p_gain.emult(rates)) : zero;
     //_att_control = -p_gain.emult(axis_err) - rates_p_gain.emult(rates.edivide(ones + axis_err));
     //_att_control = -axis_err - rates;
-    //PX4_WARN("axis error \t%8.4f\t%8.4f\t%8.4f", axis_err(0),axis_err(1),axis_err(3));
+ //PX4_WARN("axis error \t%8.4f\t%8.4f\t%8.4f", (double)q_ref(0),(double)q_ref(0),(double)q_ref(1));
     _thrust_sp=_v_att_sp.thrust;
 
-
-*/
-
 }
-
 
 
 void UnderwaterAttitudeControl::task_main_trampoline(int argc, char *argv[])
