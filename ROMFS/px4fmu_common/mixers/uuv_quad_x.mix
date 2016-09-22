@@ -8,12 +8,12 @@ Motor Configuration (from aft of vehicle)
 -------------------
 
 
-   CW 1   *  *   CCW2
+   CCW 1   *  *   CW2
        *        *
       *    X     *
       *          *
        *        *
-   CCW4   *  *   CW 3
+   CW4   *  *   CCW 3
 
 
 

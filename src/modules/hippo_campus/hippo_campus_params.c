@@ -33,82 +33,72 @@
 #include <systemlib/param/param.h>
 
 /**
- * @file uw_att_control_params.c
+ * @file hippo_campus_params.c
  *
- * Parameters for Underwater Attitude Control
+ * Choose between set of setpoints
  *
- */
-
-
-
-/**
- * Roll P Gain
- *
- * Roll proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
- * increase to make controler more aggressive
  *
  */
 
-PARAM_DEFINE_FLOAT(UW_ROLL_P, 1.0f);
 
 /**
  * Roll D Gain
  *
- * Roll rate proportional gain, i.e. control output for angular speed error 1 rad/s.
- * increase to dampen controler
+ * Choose between set of setpoints
+ * 0: NESW
+ * 1: Box
+ * 2: Helix
  *
  */
+PARAM_DEFINE_INT32(HC_MODE, 0);
 
-PARAM_DEFINE_FLOAT(UW_ROLL_RATE_P, 5.0f);
 
 /**
- * Pitch P Gain
+ * Thrust gain
  *
- * Pitch proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
- * increase to make controler more aggressive
+ * for simulation choose 0.1f
+ * for hippoc choose 1.0f
  *
  */
-
-PARAM_DEFINE_FLOAT(UW_PITCH_P, 1.0f);
+PARAM_DEFINE_FLOAT(HC_T_SCALE, 1.0f);
 
 /**
- * Pitch D Gain
+ * Manover time
  *
- * Pitch rate proportional gain, i.e. control output for angular speed error 1 rad/s.
- * increase to dampen controler
+ * time a manover should be performed
+ * or time to wait between setpoints
  *
  */
-
-PARAM_DEFINE_FLOAT(UW_PITCH_RATE_P, 5.0f);
+PARAM_DEFINE_INT32(HC_M_TIME, 5);
 
 /**
- * Yaw P Gain
+ * Wait for setoint
  *
- * Yaw proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
- * increase to make controler more aggressive
+ * 0: dont wait until setpoint is reached (use HC_M_TIME)
+ * 1: wait until setpoint is reached
  *
  */
+PARAM_DEFINE_INT32(HC_WAIT, 1);
 
-PARAM_DEFINE_FLOAT(UW_YAW_P, 1.0f);
 
 /**
- * Yaw D Gain
- *
- * Yaw rate proportional gain, i.e. control output for angular speed error 1 rad/s.
- * increase to dampen controler
+ * Yaw Setpoint
+ * for use with control mode 5
  *
  */
-
-PARAM_DEFINE_FLOAT(UW_YAW_RATE_P, 5.0f);
+PARAM_DEFINE_INT32(HC_YAW, 0);
 
 /**
- * Control Mode
- *
- * 0 - use angle setpoints
- * 1 - use Rotation Matrix setpoint
- * 2 - use Quaternion
+ * Pitch Setpoint
+ * for use with control mode 5
  *
  */
+PARAM_DEFINE_INT32(HC_PITCH, 0);
 
-PARAM_DEFINE_INT32(UW_CONTROL_MODE, 0);
+/**
+ * Roll Setpoint
+ * for use with control mode 5
+ *
+ */
+PARAM_DEFINE_INT32(HC_ROLL, 0);
 

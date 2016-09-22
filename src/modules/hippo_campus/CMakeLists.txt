@@ -37,6 +37,7 @@ px4_add_module(
 	STACK_MAX 1300
 	SRCS
                 hippo_campus_main.cpp
+                hippo_campus_params.c
 	DEPENDS
 		platforms__common
 	)
